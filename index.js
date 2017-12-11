@@ -13,8 +13,7 @@ const gm = require('gm').subClass({
 })
 
 function toPDF(input, output) {
-  if (!output)
-    output = mktmp()
+  output = output || mktmp()
 
   const cmd = [
     `soffice`,
@@ -40,8 +39,7 @@ function toPNG(input, output, page) {
   if (err)
     return [err, null]
 
-  if (!output)
-    output = path.dirname(pdf)
+  output = output || path.dirname(pdf)
 
   const filename = getFilename(input)
 
