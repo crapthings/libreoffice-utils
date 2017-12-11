@@ -1,22 +1,20 @@
-const { exec } = require('child_process')
-
 const path = require('path')
 
 const fs = require('fs-plus')
 
 const mkdirp = require('mkdirp')
 
+const shortid = require('shortid')
+
+const shell = require('shelljs')
+
 const gm = require('gm').subClass({
   imageMagick: true,
 })
 
-const shortid = require('shortid')
-
-const pWaterfall = require('p-waterfall')
-
 function toPDF(input, output) {
   if (!output)
-    output = fs.absolute(`~/tmp/${shortid.generate()}`)
+    output = mktmp()
 
   const cmd = [
     `soffice`,
@@ -26,29 +24,41 @@ function toPDF(input, output) {
     `${fs.absolute(input)}`,
   ]
 
-  const filename = path.basename(input, path.extname(input))
+  const filename = getFilename(input)
 
-  return new Promise((resolve, reject) => exec(cmd.join(' '), err => {
-    err ? reject([err, null]) : resolve([null, `${output}/${filename}.pdf`])
-  }))
+  if (shell.exec(cmd.join(' ')).stderr)
+    shell.exit(1)
+
+  return `${output}/${filename}.pdf`
 }
 
-async function toPNG(input, output, page) {
+function toPNG(input, output, page) {
+  const pdf = toPDF(input)
+
   if (!output)
-    output = fs.absolute(`~/tmp/${shortid.generate()}`)
+    output = path.dirname(pdf)
 
-  const [err, pdf] = await toPDF(input)
-
-  mkdirp.sync(output)
-
-  if (err)
-    throw err
-
-  const filename = path.basename(input, path.extname(input))
+  const filename = getFilename(input)
 
   return new Promise((resolve, reject) => gm(fs.absolute(pdf))
-  .command('convert')
-  .write(`${output}/${filename}.png`, err => {
-    err ? reject([err, null]) : resolve([null, `${output}/${filename}.png`])
-  }))
+    .command('convert')
+    .write(`${output}/${filename}.png`, err => {
+      err ? reject([err, null]) : resolve([null, `${output}/${filename}.png`])
+    })
+  )
+}
+
+function getFilename(opt) {
+  return path.basename(opt, path.extname(opt))
+}
+
+function mktmp() {
+  const tmp = fs.absolute(`~/tmp/${shortid.generate()}`)
+  mkdirp.sync(tmp)
+  return tmp
+}
+
+module.exports = {
+  toPDF,
+  toPNG,
 }
