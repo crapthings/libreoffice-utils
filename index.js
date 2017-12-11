@@ -33,7 +33,7 @@ function toPDF(input, output) {
 }
 
 function toPNG(input, output, page) {
-  const pdf = toPDF(input)
+  let pdf = path.extname(input) === '.pdf' ? fs.absolute(input) : toPDF(input)
 
   if (!output)
     output = path.dirname(pdf)

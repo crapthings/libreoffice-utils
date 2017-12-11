@@ -6,4 +6,3 @@ async function test() {
 }
 
 test()
-//
