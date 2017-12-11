@@ -1,58 +1,54 @@
+const { exec } = require('child_process')
+
 const path = require('path')
 
 const fs = require('fs-plus')
 
-const _ = require('lodash')
+const mkdirp = require('mkdirp')
+
+const gm = require('gm').subClass({
+  imageMagick: true,
+})
 
 const shortid = require('shortid')
 
-const shell = require('shelljs')
-
-const gm = require('gm').subClass({
-  imageMagick: true
-})
-
-const Extensions = ['.docx', '.xlsx', '.pptx', '.doc', '.xls', '.ppt']
-
-const soffice = shell.which('soffice') ? 'soffice' : null
+const pWaterfall = require('p-waterfall')
 
 function toPDF(input, output) {
-  if (!fs.isFileSync(input))
-    throw new Error('file doesn\'t exist')
+  if (!output)
+    output = fs.absolute(`~/tmp/${shortid.generate()}`)
 
-  if (!_.includes(Extensions, path.extname(input)))
-    throw new Error('unsupported file format')
+  const cmd = [
+    `soffice`,
+    `--headless`,
+    `--convert-to pdf`,
+    `--outdir ${output}`,
+    `${fs.absolute(input)}`,
+  ]
 
   const filename = path.basename(input, path.extname(input))
 
-  console.log(filename)
+  return new Promise((resolve, reject) => exec(cmd.join(' '), err => {
+    err ? reject([err, null]) : resolve([null, `${output}/${filename}.pdf`])
+  }))
+}
 
+async function toPNG(input, output, page) {
   if (!output)
-    output = `~/tmp/${shortid.generate()}`
+    output = fs.absolute(`~/tmp/${shortid.generate()}`)
 
-  let cmd = `${soffice} --headless --convert-to pdf --outdir ${output} ${input}`
+  const [err, pdf] = await toPDF(input)
 
-  const exec = shell.exec(cmd)
+  mkdirp.sync(output)
 
-  if (exec.stderr)
-    shell.exit(1)
+  if (err)
+    throw err
 
-  return `${output}/${filename}.pdf`
+  const filename = path.basename(input, path.extname(input))
+
+  return new Promise((resolve, reject) => gm(fs.absolute(pdf))
+  .command('convert')
+  .write(`${output}/${filename}.png`, err => {
+    err ? reject([err, null]) : resolve([null, `${output}/${filename}.png`])
+  }))
 }
-
-function toPNG(input, output) {
-  const pdf = fs.absolute(toPDF(input))
-  console.log(pdf)
-  gm(pdf)
-    .command('convert')
-    .write('./test.png', function (err) {
-      console.log(err)
-    })
-}
-
-// console.log()
-
-//
-//
-
-toPNG('./example.docx')
