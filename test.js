@@ -1,8 +1,8 @@
 const lu = require('./')
 
 async function test() {
-  const pdf = lu.toPDF('./example.docx')
-  const png = await lu.toPNG('./example.docx')
+  const [errToPDF, respToPDF] = lu.toPDF('./example.docx')
+  const [errToPNG, respToPNG] = await lu.toPNG('./example.docx')
 }
 
 test()

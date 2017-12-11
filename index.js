@@ -26,14 +26,19 @@ function toPDF(input, output) {
 
   const filename = getFilename(input)
 
-  if (shell.exec(cmd.join(' ')).stderr)
-    shell.exit(1)
+  const { stderr } = shell.exec(cmd.join(' '))
 
-  return `${output}/${filename}.pdf`
+  if (stderr)
+    return [stderr, null]
+
+  return [null, `${output}/${filename}.pdf`]
 }
 
 function toPNG(input, output, page) {
-  let pdf = path.extname(input) === '.pdf' ? fs.absolute(input) : toPDF(input)
+  let [err, pdf] = path.extname(input) === '.pdf' ? [null, fs.absolute(input)] : toPDF(input)
+
+  if (err)
+    return [err, null]
 
   if (!output)
     output = path.dirname(pdf)
